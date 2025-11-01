@@ -41,7 +41,7 @@ You are a social media content expert. Given the following news, generate a catc
             contents=prompt_template,
             config={
                 "temperature": 0.7,
-                "response_mime_type": "application/json"
+                
             },
         )
 
@@ -64,6 +64,6 @@ You are a social media content expert. Given the following news, generate a catc
             print("Text tweet posted!")
 
 # Usage
-# if __name__ == "__main__":
-#     twitter_api = TwitterAPI()
-#     twitter_api.tweet_content("This is a test tweet with an image.", "Screenshot 2025-09-08 005600.png")
+if __name__ == "__main__":
+    twitter_api = TwitterAPI()
+    twitter_api.tweet_content("This is a test tweet with an image.", "Screenshot 2025-09-08 005600.png")

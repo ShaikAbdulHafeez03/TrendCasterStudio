@@ -20,6 +20,13 @@ def scrape_website(url: str,source:str) -> dict:
             if meta_desc:
                 description = meta_desc.get("content")
 
+        print(f"Scraped article ",{
+            "topic": title,
+            "image": image,
+            "description": description,
+            "source": source,
+            "url": url
+        })
         return {
             "topic": title,
             "image": image,

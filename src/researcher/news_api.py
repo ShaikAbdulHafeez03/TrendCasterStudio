@@ -18,7 +18,6 @@ tech_news_domains = [
     "arstechnica.com",
     "venturebeat.com",
     "recode.net",
-    "gizmodo.com",
     "digitaltrends.com",
     "gadgets360.com",
     "inc42.com",
@@ -33,7 +32,7 @@ class NewsAPI:
 
     def get_top_news(self, topic: str | None = None, count: int = 50) -> list[dict]:
         domains = ",".join(self.domains)
-        from_date = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+        from_date = (datetime.now(timezone.utc) - timedelta(days=3)).strftime("%Y-%m-%d")
         to_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         if topic:

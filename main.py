@@ -7,6 +7,7 @@ from src.researcher.site_scraper import scrape_website
 from src.social_medias.instagram.api import InstagramAPI
 from src.social_medias.instagram.utils import InstagramPostCreator
 from src.utils.file_uploader.upload_file import upload_to_gcs
+from src.utils.add_audio.mp4_generetor import ReelGenerator
 
 
 def main():
@@ -20,13 +21,17 @@ def main():
         get_scrape=scrape_website(item['url'],item['source'])
         generator = NewsSocialImageGenerator(get_scrape)
         file_path = generator.process_news()
+        if file_path is None:
+            print(f"Skipping article due to image generation failure: {item['url']}")
+            continue
         gen_insta = InstagramPostCreator(
             image_path=file_path,
             news_dict=get_scrape
         )
         content = gen_insta.process_insta_post()
-
-        file_url = upload_to_gcs(content["post_image"])
+        reel_creator = ReelGenerator(image_path=content["post_image"])
+        output_video = reel_creator.generate(get_scrape["topic"])
+        file_url = upload_to_gcs(output_video)
         twitter_api = TwitterAPI()
         twitter_api.tweet_content(get_scrape, content["post_image"])
         insta_post = InstagramAPI()
@@ -34,6 +39,7 @@ def main():
             image_url=file_url,
             caption=content["caption"],
         )
+        container_id =insta_post.create_reel_container(video_url=file_url,caption=content["caption"])
 
         insta_post.publish_media(container_id["id"])
 

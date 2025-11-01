@@ -1,6 +1,8 @@
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
 from google import genai
+from dotenv import load_dotenv
+load_dotenv()
 
 class InstagramPostCreator:    
     def __init__(self, image_path, news_dict, output_path=None, font_path=None):
@@ -15,7 +17,7 @@ class InstagramPostCreator:
             self.font_path = noto_path if os.path.exists(noto_path) else dm_path
         else:
             self.font_path = font_path
-        self.client=genai.Client(api_key="AIzaSyBrfnzJTeygWBx8ZKu4PyaADT5ZuL9MgwQ")
+        self.client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY")) 
 
     def generate_content(self, news_dict):
         """
@@ -145,6 +147,12 @@ News Context: {context}
         print(f"Saved to {output_path}")
         return output_path
 
+
+    def generate_instagram_reels(self, image_path):
+        # Placeholder for reels generation logic
+        # For now, just return the video path
+        return video_path
+    
     def process_insta_post(self):
         content = self.generate_content(self.news_dict)
         post_image = self.generate_instagram_post(
@@ -158,17 +166,17 @@ News Context: {context}
             "post_image": post_image,
             "caption": content.get("caption", "") + "\n" + content.get("hashtags", "")
         }
-if __name__ == "__main__":
-    post= InstagramPostCreator(
-        image_path="/WhatsApp Image 2025-07-21 at 12.23.33 PM.jpeg",
-        news_dict={
-            "title": "Meta Acquires Play AI: Powering Next-Gen Natural Voices",
-            "description": "Meta has acquired Play AI, a startup behind hyper-realistic AI-generated voices for audio content creation. The entire Play AI team joins Meta, boosting projects in Meta AI, audio-based content tools, and future wearables."
-        },)
-    post.generate_instagram_post(
-        image_path="social_post_1757262816_hu3end_e703de_1.png",
-        heading=" Tesla's $1T Pay Package for Elon Musk Sparks Debate: Are the Goals Too Easy?",
-        description="Tesla's board has proposed an unprecedented $1 trillion compensation package for CEO Elon Musk. However, critics point out that the performance benchmarks are significantly less ambitious than Musk's own previous pledges, such as reducing a 20 million electric vehicle per year goal to 20 million total over a decade. This move comes as Tesla's sales growth has stalled, raising questions about accountability and the true value of the proposed deal, which still requires shareholder approval.",
-        output_path="output_post.jpg",
-        font_path="fonts/Noto_Serif/NotoSerif-VariableFont_wdth,wght.ttf"
-    )
+# if __name__ == "__main__":
+#     post= InstagramPostCreator(
+#         image_path="/WhatsApp Image 2025-07-21 at 12.23.33 PM.jpeg",
+#         news_dict={
+#             "title": "Meta Acquires Play AI: Powering Next-Gen Natural Voices",
+#             "description": "Meta has acquired Play AI, a startup behind hyper-realistic AI-generated voices for audio content creation. The entire Play AI team joins Meta, boosting projects in Meta AI, audio-based content tools, and future wearables."
+#         },)
+#     post.generate_instagram_post(
+#         image_path="social_post_1757262816_hu3end_e703de_1.png",
+#         heading=" Tesla's $1T Pay Package for Elon Musk Sparks Debate: Are the Goals Too Easy?",
+#         description="Tesla's board has proposed an unprecedented $1 trillion compensation package for CEO Elon Musk. However, critics point out that the performance benchmarks are significantly less ambitious than Musk's own previous pledges, such as reducing a 20 million electric vehicle per year goal to 20 million total over a decade. This move comes as Tesla's sales growth has stalled, raising questions about accountability and the true value of the proposed deal, which still requires shareholder approval.",
+#         output_path="output_post.jpg",
+#         font_path="fonts/Noto_Serif/NotoSerif-VariableFont_wdth,wght.ttf"
+#     )

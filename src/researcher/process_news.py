@@ -1,5 +1,6 @@
 # news_to_social_image.py
 
+import mimetypes
 import random
 import re
 import string
@@ -136,7 +137,7 @@ class NewsSocialImageGenerator:
 
         # Call Gemini
         response = self.client.models.generate_content(
-            model="gemini-2.5-flash-image-preview",
+            model="gemini-2.5-flash",
             contents=image_objects + [text_input],
             config=types.GenerateContentConfig(
                 system_instruction=(
@@ -144,11 +145,12 @@ class NewsSocialImageGenerator:
                     "Always output ONE clear and direct prompt that blends the news story "
                     "with the reference images into a single, Instagram-ready final image. "
                     "Keep it minimal (under 400 tokens)."
+                    "NOTE: Only output the prompt text and nothing else."
                 ),
                 temperature=0.7,
             ),
         )
-
+        print(response)
         refined_prompt = response.text if response.text else None
 
         if not refined_prompt:
@@ -157,9 +159,60 @@ class NewsSocialImageGenerator:
         print("Refined Prompt:", refined_prompt)
         return refined_prompt
     
+    # def generate_image(self, prompt: str, images):
+    #     """
+    #     Generate a final news-based social media image.
+    #     Takes the refined prompt (from Gemini text model) and reference images,
+    #     then calls the image generation model to create one high-quality,
+    #     Instagram-ready image.
+    #     """
+
+    #     # Unique file name for saving
+    #     timestamp = int(time.time())
+    #     rand_str = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+    #     unique_id = uuid.uuid4().hex[:6]
+    #     output_filename = f"./src/assets/social_post_{timestamp}_{rand_str}_{unique_id}.png"
+
+    #     # Combine prompt and images
+    #     contents = [prompt] + images
+
+    #     # Call Gemini Image Model
+    #     response = self.client.models.generate_content(
+    #         model="gemini-2.0-flash-preview-image-generation",
+    #         contents=contents
+    #         # config=types.GenerateContentConfig(
+    #         #     system_instruction=(
+    #         #         "You are an AI image editor and generator for tech news posts. "
+    #         #         "Your task is to create a single, polished Instagram-ready image "
+    #         #         "based on the provided prompt and input images.\n\n"
+    #         #         "Guidelines:\n"
+    #         #         "- Always blend or enhance the input images rather than discarding them.\n"
+    #         #         "- Clearly illustrate the news story in a compelling, professional way.\n"
+    #         #         "- Maintain photorealism unless the prompt explicitly asks otherwise.\n"
+    #         #         "- FINAL OUTPUT SIZE MUST BE 1080x1080 pixels for Instagram posts.\n"
+    #         #         "- Ensure the result is visually clean, shareable, and high-quality.\n"
+    #         #         "### NOTE: Only output one final image per request."
+    #         #     )
+    #         # ),
+    #     )
+
+    #     # Extract and save image(s)
+    #     print(f"Image response: {response.candidates[0].content}")
+    #     parts = response.candidates[0].content.parts
+    #     for idx, part in enumerate(parts, start=1):
+    #         if part.inline_data is not None:
+    #             image = Image.open(BytesIO(part.inline_data.data))
+    #             file_name = output_filename.replace(".png", f"_{idx}.png")
+    #             image.save(file_name)
+    #             print(f"✅ Saved generated image as {file_name}")
+    #         elif part.text is not None:
+    #             print("⚠️ Model returned text instead of an image:", part.text)
+
+    #     return file_name
+
     def generate_image(self, prompt: str, images):
         """
-        Generate a final news-based social media image.
+        Generate a final news-based social media image using a streaming request.
         Takes the refined prompt (from Gemini text model) and reference images,
         then calls the image generation model to create one high-quality,
         Instagram-ready image.
@@ -169,44 +222,92 @@ class NewsSocialImageGenerator:
         timestamp = int(time.time())
         rand_str = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
         unique_id = uuid.uuid4().hex[:6]
-        output_filename = f"./src/assets/social_post_{timestamp}_{rand_str}_{unique_id}.png"
+        # Base filename, index will be added
+        output_filename_base = f"./src/assets/social_post_{timestamp}_{rand_str}_{unique_id}"
 
-        # Combine prompt and images
-        contents = [prompt] + images
+        # --- CONVERTED CODE: START ---
 
-        # Call Gemini Image Model
-        response = self.client.models.generate_content(
-            model="gemini-2.5-flash-image-preview",
-            contents=contents,
-            config=types.GenerateContentConfig(
-                system_instruction=(
-                    "You are an AI image editor and generator for tech news posts. "
-                    "Your task is to create a single, polished Instagram-ready image "
-                    "based on the provided prompt and input images.\n\n"
-                    "Guidelines:\n"
-                    "- Always blend or enhance the input images rather than discarding them.\n"
-                    "- Clearly illustrate the news story in a compelling, professional way.\n"
-                    "- Maintain photorealism unless the prompt explicitly asks otherwise.\n"
-                    "- FINAL OUTPUT SIZE MUST BE 1080x1080 pixels for Instagram posts.\n"
-                    "- Ensure the result is visually clean, shareable, and high-quality.\n"
-                    "### NOTE: Only output one final image per request."
-                )
-            ),
+        # 1. Define the full prompt (same as before, system instructions are here)
+        full_prompt = (
+            "You are an AI image editor and generator for tech news posts. "
+            "Your task is to create a single, polished Instagram-ready image "
+            "based on the provided prompt and input images.\n\n"
+            "Guidelines:\n"
+            "- Always blend or enhance the input images rather than discarding them.\n"
+            "- Clearly illustrate the news story in a compelling, professional way.\n"
+            "- Maintain photorealism unless the prompt explicitly asks otherwise.\n"
+            "- FINAL OUTPUT SIZE MUST BE 1080x1080 pixels for Instagram posts.\n"
+            "- Ensure the result is visually clean, shareable, and high-quality.\n"
+            "### NOTE: Only output one final image per request.\n\n"
+            "--- TASK --- \n"
+            f"{prompt}"  # This is the original prompt from generate_social_prompt
         )
 
-        # Extract and save image(s)
-        print(f"Image response: {response.candidates[0].content}")
-        parts = response.candidates[0].content.parts
-        for idx, part in enumerate(parts, start=1):
-            if part.inline_data is not None:
-                image = Image.open(BytesIO(part.inline_data.data))
-                file_name = output_filename.replace(".png", f"_{idx}.png")
-                image.save(file_name)
-                print(f"✅ Saved generated image as {file_name}")
-            elif part.text is not None:
-                print("⚠️ Model returned text instead of an image:", part.text)
+        # 2. Set up contents, model, and config
+        contents = [full_prompt] + images
+        model = "gemini-2.0-flash-preview-image-generation"  # Using the model from your example
+        
+        generate_content_config = types.GenerateContentConfig(
+            response_modalities=[
+                "IMAGE",  # We expect an IMAGE
+                "TEXT",   # and/or TEXT (for errors or messages)
+            ],
+        )
 
-        return file_name
+        # 3. Call the streaming endpoint
+        stream = self.client.models.generate_content_stream(
+            model=model,
+            contents=contents,
+            config=generate_content_config,
+        )
+
+        # 4. Loop through chunks and save the image
+        file_index = 0
+        saved_file_name = None  # To store the path of the saved file
+
+        for chunk in stream:
+            # Safety check from your example
+            if (
+                chunk.candidates is None
+                or chunk.candidates[0].content is None
+                or chunk.candidates[0].content.parts is None
+            ):
+                continue
+
+            # Check if the part is image data
+            part = chunk.candidates[0].content.parts[0]
+            if part.inline_data and part.inline_data.data:
+                data_buffer = part.inline_data.data
+                
+                # We use PIL to open and save, as it's more robust for images
+                try:
+                    image = Image.open(BytesIO(data_buffer))
+                    
+                    # Use mimetypes to get the correct extension
+                    file_extension = mimetypes.guess_extension(part.inline_data.mime_type)
+                    if not file_extension:
+                        file_extension = ".png" # Default to png
+                        
+                    current_file_name = f"{output_filename_base}_{file_index}{file_extension}"
+                    image.save(current_file_name)
+                    
+                    print(f"✅ Saved generated image as {current_file_name}")
+                    saved_file_name = current_file_name # Update the last saved name
+                    file_index += 1
+                    
+                except Exception as e:
+                    print(f"❌ Failed to process and save image chunk: {e}")
+
+            # Print any text parts (like debug messages or errors from the model)
+            elif part.text:
+                print(f"ℹ️ Model text response: {part.text}")
+
+        # --- CONVERTED CODE: END ---
+        
+        if not saved_file_name:
+             print("❌ Error: Model did not return any image data.")
+
+        return saved_file_name # Return the path to the last saved image
     def process_news(self):
         """
         Full pipeline: convert image set to list, download images, select relevant, 
