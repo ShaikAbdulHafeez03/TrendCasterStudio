@@ -94,10 +94,10 @@ def process_and_post(index: int):
 
 
 
-scheduler.add_job(prepare_daily_news, "cron", hour=19, minute=2)
+scheduler.add_job(prepare_daily_news, "cron", hour=19, minute=1)
 
 
-scheduler.add_job(process_and_post, "cron", hour=19, minute=4, args=[0])
+scheduler.add_job(process_and_post, "cron", hour=19, minute=3, args=[0])
 scheduler.add_job(process_and_post, "cron", hour=13, minute=30, args=[1])
 scheduler.add_job(process_and_post, "cron", hour=16, minute=30, args=[2])
 scheduler.add_job(process_and_post, "cron", hour=19, minute=30, args=[3])
