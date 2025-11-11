@@ -10,7 +10,7 @@ from src.researcher.process_news import NewsSocialImageGenerator
 from src.researcher.site_scraper import scrape_website
 from src.social_medias.instagram.api import InstagramAPI
 from src.social_medias.instagram.utils import InstagramPostCreator
-from src.utils.file_uploader.upload_file import upload_to_gcs
+from src.utils.file_uploader.upload_file import upload_file
 from src.utils.add_audio.mp4_generetor import ReelGenerator
 
 
@@ -20,7 +20,6 @@ used_indexes = set() # track which indexes were already successfully posted
 
 
 def prepare_daily_news():
-    """Run once daily at 4:30 AM to fetch top 8 news and prepare them"""
     global news_list, used_indexes
     used_indexes.clear()
     print(f"[{datetime.now()}] 📰 Starting daily news preparation...")
@@ -30,17 +29,14 @@ def prepare_daily_news():
     print(f"Total news articles fetched: {len(all_news)}")
 
     filter_top_news = FilterTrend()
-    # select top 8 (5 main + 3 backups)
     news_list = filter_top_news.select_top_3_news_by_viral_potential(all_news)[:8]
 
     print(f"[{datetime.now()}] ✅ Prepared {len(news_list)} news items for today.")
 
 
 def process_and_post(index: int):
-    """Post one of the prepared news items with fallback to next available if fails"""
     global news_list, used_indexes
 
-    # Find the next unused news item starting from the requested index
     next_index = None
     for i in range(index, len(news_list)):
         if i not in used_indexes:
@@ -50,30 +46,26 @@ def process_and_post(index: int):
     if next_index is None:
         print(f"[{datetime.now()}] ⚠️ No unused news left to post.")
         return
-
     item = news_list[next_index]
     print(f"[{datetime.now()}] 🚀 Attempting to post news #{next_index + 1}: {item.get('title', '')[:60]}...")
 
     try:
-        # Scrape content
         get_scrape = scrape_website(item['url'], item['source'])
-
-        # Process image
         generator = NewsSocialImageGenerator(get_scrape)
         file_path = generator.process_news()
         if not file_path:
             print(f"⚠️ No image found for news #{next_index + 1}, trying next backup...")
             used_indexes.add(next_index)
-            return process_and_post(next_index + 1)  # move to next news
+            return process_and_post(next_index + 1)  
 
-        # Prepare post
+
         gen_insta = InstagramPostCreator(image_path=file_path, news_dict=get_scrape)
         content = gen_insta.process_insta_post()
 
         # Create reel
         reel_creator = ReelGenerator(image_path=content["post_image"])
         output_video = reel_creator.generate(get_scrape["topic"])
-        file_url = upload_to_gcs(output_video)
+        file_url = upload_file(output_video)
 
         # Post to Twitter
         twitter_api = TwitterAPI()
@@ -101,13 +93,11 @@ def process_and_post(index: int):
         return process_and_post(next_index + 1)
 
 
-# ========== Schedule Jobs ==========
 
-# Step 1: fetch & prepare at 4:30 AM
-scheduler.add_job(prepare_daily_news, "cron", hour=12, minute=26)
+scheduler.add_job(prepare_daily_news, "cron", hour=18, minute=28)
 
-# Step 2: post 5 main items throughout the day
-scheduler.add_job(process_and_post, "cron", hour=12, minute=28, args=[0])
+
+scheduler.add_job(process_and_post, "cron", hour=18, minute=30, args=[0])
 scheduler.add_job(process_and_post, "cron", hour=13, minute=30, args=[1])
 scheduler.add_job(process_and_post, "cron", hour=16, minute=30, args=[2])
 scheduler.add_job(process_and_post, "cron", hour=19, minute=30, args=[3])

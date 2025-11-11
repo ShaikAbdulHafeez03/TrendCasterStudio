@@ -1,51 +1,44 @@
+from supabase import create_client
 import os
-from supabase import create_client, Client
 
-# ✅ Replace these with your Supabase project details
-SUPABASE_URL = "https://zgysyaxscrnkehvyehyl.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpneXN5YXhzY3Jua2VodnllaHlsIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MTYzNjE1NSwiZXhwIjoyMDc3MjEyMTU1fQ.zPHu13XtBQyayj3EBbgxX9HA8mNX06eYRzfwQ5O2Ct4"
-BUCKET_NAME = "socia_automator"
-
-# Create the client object
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+SUPABASE_URL = "https://rmkbwjjeegmxwqpmqzpw.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJta2J3amplZWdteHdxcG1xenB3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Mjg0ODczNCwiZXhwIjoyMDc4NDI0NzM0fQ.WfORcTLVNx0YDxwIk-yqUJQjsP6FuE3DgWKc43esnX8"
+BUCKET_NAME = "social_automator"
 
 
-def upload_to_gcs(source_file_path, bucket_name=BUCKET_NAME):
-    """
-    Uploads a file to a Supabase Storage bucket.
-    """
-    try:
-        filename = os.path.basename(source_file_path)
-        destination_blob_name = f"videos/{filename}"
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-        with open(source_file_path, "rb") as f:
-            # The upload call will raise an exception if it fails
-            supabase.storage.from_(bucket_name).upload(
-                destination_blob_name,
-                f,
-                # ❗FIX: Pass upsert as a string header
-                file_options={"x-upsert": "true"}
-            )
 
-        # If upload succeeded, get public URL
-        public_url = supabase.storage.from_(bucket_name).get_public_url(destination_blob_name)
-        
-        print(f"Successfully uploaded to: {public_url}")
-        return public_url
-        
-    except Exception as e:
-        print(f"Upload failed: {e}")
+def upload_file(file_path: str):
+    """Uploads a file to Supabase Storage and returns its public URL."""
+    if not os.path.exists(file_path):
+        print(f"❌ File not found: {file_path}")
         return None
 
-# --- Example Usage ---
-# if __name__ == "__main__":
-#     # Create a dummy file to test
-#     with open("test_upload.txt", "w") as f:
-#         f.write("Hello Supabase!")
-    
-#     url = upload_to_supabase("test_upload.txt")
-    
-#     if url:
-#         print(f"File URL: {url}")
-#     else:
-#         print("Upload failed.")
+    file_name = os.path.basename(file_path)
+    dest_path = f"videos/{file_name}"
+
+    print(f"📤 Uploading {file_name} → {BUCKET_NAME}/{dest_path}")
+
+    with open(file_path, "rb") as f:
+        result = supabase.storage.from_(BUCKET_NAME).upload(
+            path=dest_path,
+            file=f,
+            file_options={"x-upsert": "true"},
+        )
+
+    if hasattr(result, "error") and result.error:
+        print("❌ Upload failed:", result.error)
+        return None
+
+    print("✅ Upload successful!")
+
+
+    public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(dest_path)
+    print("🌐 Public URL:", public_url)
+    return public_url
+
+
+if __name__ == "__main__":
+    file_path = "output.mp4"  
+    upload_file(file_path)
