@@ -131,6 +131,36 @@ class ReelGenerator:
             except requests.exceptions.RequestException as e:
                 print(f"Error making request to Freesound for '{word}': {e}")
         return audio_files
+    
+    def _get_audio_files_from_folder(self) -> list[dict]:
+        folder_path="src/utils/add_audio/custom_songs"
+        """
+        Scans the given folder for audio files and returns them
+        as a list of dicts: [{ 'name': 'file.mp3', 'path': '/path/file.mp3' }, ...]
+        """
+        supported_exts = (".mp3", ".wav", ".ogg", ".m4a")
+
+        if not os.path.exists(folder_path):
+            print(f"❌ Folder not found: {folder_path}")
+            return []
+
+        audio_files = []
+        for root, _, files in os.walk(folder_path):
+            for file in files:
+                if file.lower().endswith(supported_exts):
+                    full_path = os.path.join(root, file)
+                    audio_files.append({
+                        "name": file,
+                        "path": full_path
+                    })
+
+        if not audio_files:
+            print(f"⚠️ No audio files found in: {folder_path}")
+        else:
+            print(f"🎵 Found {len(audio_files)} audio files in '{folder_path}'")
+
+        return audio_files
+
 
     def _select_best_audio(self, news_title: str, audio_files: list[dict]) -> str:
         """Selects the best audio track from a list using the Gemini API."""
@@ -170,6 +200,13 @@ class ReelGenerator:
             print(f"Error during Gemini audio selection: {e}. Defaulting to first track.")
             return audio_files[0]['path']
 
+    def choose_best_audio_for_news(self, news_title: str) -> str:
+        """
+        Finds all audio files in a folder and uses Gemini to pick the best one.
+        """
+        audio_files = self._get_audio_files_from_folder()
+        return self._select_best_audio(news_title, audio_files)
+    
     def _create_video(self, audio_path: str, output_path: str = "output.mp4") -> str:
         """Creates a video from the stored image path and an audio file."""
         print("Creating video with ffmpeg...")
@@ -235,7 +272,9 @@ class ReelGenerator:
                 raise RuntimeError("No audio could be downloaded for any keyword.")
             print("\nDownloaded audio options:", [f['name'] for f in audio_files])
 
-            selected_audio_path = self._select_best_audio(news_title, audio_files)
+            # selected_audio_path = self._select_best_audio(news_title, audio_files)
+            selected_audio_path=self.choose_best_audio_for_news(news_title)
+            
             if not selected_audio_path:
                 raise RuntimeError("Could not select an audio file.")
             print("Final selected audio path:", selected_audio_path)
